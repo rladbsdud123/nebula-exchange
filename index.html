@@ -179,6 +179,31 @@
   footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 11px; color: var(--fg-faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   footer .disc { font-family: var(--mono); }
 
+  /* ---- profile / wallet page ---- */
+  #userChip { cursor: pointer; }
+  #userChip:hover { color: var(--accent); }
+  .back-btn { margin: 4px 0 14px; background: none; border: none; color: var(--fg-dim); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 0; }
+  .back-btn:hover { color: var(--accent); }
+  .profile-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; flex-wrap: wrap; }
+  .profile-id { display: flex; align-items: center; gap: 14px; }
+  .avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #b49bff); display: grid; place-items: center; font-size: 22px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .profile-name { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .profile-meta { font-size: 12px; color: var(--fg-faint); font-family: var(--mono); margin-top: 3px; }
+  .pf-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 14px; }
+  .pf-card { padding: 18px 20px; display: flex; flex-direction: column; gap: 5px; }
+  .pf-card .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--fg-faint); font-weight: 600; }
+  .pf-big { font-family: var(--mono); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .pf-sub { font-family: var(--mono); font-size: 13px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+  .pf-section { margin-top: 14px; }
+  .holdings-table, .orders-table { min-width: 680px; }
+  .holdings-table td { padding: 14px 16px; }
+  .alloc-wrap { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .alloc-bar { width: 72px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+  .alloc-bar span { display: block; height: 100%; background: var(--accent); }
+  @media (max-width: 680px) {
+    .pf-summary { grid-template-columns: 1fr; }
+  }
+
   #gate { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: radial-gradient(900px 500px at 80% -10%, var(--accent-soft), transparent 60%), var(--bg); }
   .login-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 32px 28px; box-shadow: 0 24px 60px -20px rgba(0,0,0,.35); }
   .login-card .brand { font-size: 22px; margin-bottom: 4px; }
@@ -223,7 +248,7 @@
       <svg class="mark" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="15" stroke="var(--accent)" stroke-width="2"/><path d="M16 5 L25 22 L7 22 Z" fill="var(--accent)" opacity="0.25"/><circle cx="16" cy="16" r="4.5" fill="var(--accent)"/></svg>
       Nebula <span class="tag">Live</span>
     </div>
-    <nav><a href="#" class="active">Trade</a><a href="#">Markets</a><a href="#">Earn</a><a href="#">Portfolio</a></nav>
+    <nav><a href="#" class="active" data-view="trade">Trade</a><a href="#" data-view="trade">Markets</a><a href="#">Earn</a><a href="#" data-view="wallet">Portfolio</a></nav>
     <div class="spacer"></div>
     <div class="head-actions">
       <span class="live-dot" id="liveDot"><span class="d"></span><span id="liveTxt">connecting…</span></span>
@@ -233,6 +258,7 @@
     </div>
   </header>
 
+  <div id="view-trade">
   <div class="ticker"><div class="ticker-scroll" id="ticker"></div></div>
 
   <div class="grid">
@@ -297,6 +323,57 @@
       <tbody id="orders"><tr class="orders-empty"><td colspan="8">No orders yet — place one from the trade panel above.</td></tr></tbody>
     </table></div>
   </div>
+  </div><!-- /view-trade -->
+
+  <!-- ============ PROFILE / WALLET PAGE ============ -->
+  <div id="view-wallet" hidden>
+    <button class="back-btn" id="backBtn">← Back to Trade</button>
+
+    <div class="profile-head panel">
+      <div class="profile-id">
+        <div class="avatar" id="avatarBig">N</div>
+        <div>
+          <div class="profile-name" id="profileName">@user</div>
+          <div class="profile-meta">Nebula account · member since Aug 2022 · <span id="pf-src">—</span></div>
+        </div>
+      </div>
+      <span class="wallet-ccy" id="ccyToggle2" role="button" tabindex="0">Show in ₩ KRW</span>
+    </div>
+
+    <div class="pf-summary">
+      <div class="panel pf-card">
+        <span class="lbl">Total portfolio value</span>
+        <div class="pf-big" id="pfTotal">—</div>
+        <div class="pf-sub" id="pfTotalAlt">—</div>
+      </div>
+      <div class="panel pf-card">
+        <span class="lbl">All-time P&amp;L (demo)</span>
+        <div class="pf-big" id="pfPnl">—</div>
+        <div class="pf-sub" id="pfPnlPct">—</div>
+      </div>
+      <div class="panel pf-card">
+        <span class="lbl">Total trades</span>
+        <div class="pf-big" id="pfTrades">—</div>
+        <div class="pf-sub" id="pfTradesSub">—</div>
+      </div>
+    </div>
+
+    <div class="panel pf-section">
+      <div class="panel-head"><h2>My Coins</h2></div>
+      <div class="table-scroll"><table class="holdings-table">
+        <thead><tr><th>Asset</th><th>Holdings</th><th>Price</th><th>Value</th><th>Value (KRW)</th><th>Allocation</th></tr></thead>
+        <tbody id="holdings2"></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel pf-section">
+      <div class="panel-head"><h2>Transaction History</h2><span class="orders-count" id="ordersCount2">—</span></div>
+      <div class="table-scroll"><table class="orders-table">
+        <thead><tr><th>Time</th><th>Pair</th><th>Side</th><th>Type</th><th>Price</th><th>Amount</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody id="orders2"></tbody>
+      </table></div>
+    </div>
+  </div>
 
   <footer>
     <span>Nebula Exchange — a fictional trading UI. Prices are real market data (CoinGecko); orders and balances are simulated. Not a real exchange.</span>
@@ -316,7 +393,13 @@
   function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
   function hash(s){var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return String(h>>>0);}
   var gate=document.getElementById("gate"),app=document.getElementById("app"),started=false;
-  function enterApp(u){gate.hidden=true;app.hidden=false;document.getElementById("userChip").textContent=u?"@"+u:"";if(!started){started=true;startEngine();}}
+  function enterApp(u){
+    gate.hidden=true;app.hidden=false;
+    document.getElementById("userChip").textContent=u?"@"+u:"";
+    var pn=document.getElementById("profileName"); if(pn) pn.textContent=u?"@"+u:"@user";
+    var av=document.getElementById("avatarBig"); if(av) av.textContent=(u||"N").charAt(0).toUpperCase();
+    if(!started){started=true;startEngine();}
+  }
   (function initGate(){
     var sess=lsGet(SESSION); if(sess){enterApp(sess);return;}
     var form=document.getElementById("loginForm"),err=document.getElementById("loginErr"),sub=form.querySelector(".login-sub");
@@ -596,11 +679,78 @@
       var amtStr=h.sym==="USDT"?h.amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):h.amt.toLocaleString("en-US",{minimumFractionDigits:4,maximumFractionDigits:4});
       return '<div class="hold-row"><div class="hold-asset"><span class="ci" style="background:'+color+'">'+h.sym.charAt(0)+'</span><span><div class="nm">'+h.sym+'</div><div class="fn">'+full+'</div></span></div><div class="hold-amt">'+amtStr+' '+h.sym+'</div><div class="hold-val">'+primary+'<span class="sub">'+secondary+'</span></div></div>';
     }).join("");
+    renderProfile(total);
   }
-  var ccyToggle=document.getElementById("ccyToggle");
-  function toggleCcy(){showKrw=!showKrw;ccyToggle.textContent=showKrw?"Show in $ USD":"Show in ₩ KRW";renderWallet();}
-  ccyToggle.addEventListener("click",toggleCcy);
-  ccyToggle.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleCcy();}});
+
+  // cost basis for a simple demo P&L: what the holdings "cost" historically
+  var COST_BASIS_USD = 3.5*42000 + 80000;   // 3.5 BTC bought ~avg $42k + 80k USDT deposited
+  function renderProfile(total){
+    if(document.getElementById("view-wallet").hidden) {
+      // still keep numbers fresh for when it opens; cheap enough
+    }
+    if(total==null){ total=0; holdings.forEach(function(h){total+=h.amt*priceOf(h.sym);}); }
+    var pct=showKrw?fmtKrw(total):fmtUsd(total);
+    var alt=showKrw?("≈ "+fmtUsd(total)+" USD"):("≈ "+fmtKrw(total));
+    setTxt("pfTotal",pct); setTxt("pfTotalAlt",alt);
+    // P&L
+    var pnl=total-COST_BASIS_USD;
+    var pnlStr=(pnl>=0?"+":"-")+(showKrw?fmtKrw(Math.abs(pnl)):fmtUsd(Math.abs(pnl)));
+    var pnlPct=((pnl/COST_BASIS_USD)*100);
+    var pn=document.getElementById("pfPnl");
+    if(pn){ pn.textContent=pnlStr; pn.className="pf-big "+(pnl>=0?"up":"down"); }
+    setTxt("pfPnlPct",(pnl>=0?"+":"")+pnlPct.toFixed(2)+"% all-time");
+    // trades
+    var filled=orders.filter(function(o){return (o.status||"Filled")==="Filled";}).length;
+    setTxt("pfTrades",String(orders.length));
+    setTxt("pfTradesSub",filled+" filled · BTC/USDT");
+    setTxt("pf-src",demoOn?"demo data":(wsAlive?"live · Binance":"live"));
+    // holdings table
+    var hEl=document.getElementById("holdings2");
+    if(hEl){
+      hEl.innerHTML=holdings.map(function(h){
+        var a=assets.filter(function(x){return x.sym===h.sym;})[0];
+        var color=a?a.color:"#26a17b", full=a?a.name:"Tether";
+        var price=priceOf(h.sym), val=h.amt*price;
+        var alloc=total>0?(val/total*100):0;
+        var amtStr=h.sym==="USDT"?h.amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):h.amt.toLocaleString("en-US",{minimumFractionDigits:4,maximumFractionDigits:4});
+        return '<tr>'+
+          '<td style="text-align:left"><div class="coin"><span class="ci" style="background:'+color+'">'+h.sym.charAt(0)+'</span><span><div class="nm">'+h.sym+'</div><div class="fn">'+full+'</div></span></div></td>'+
+          '<td>'+amtStr+' '+h.sym+'</td>'+
+          '<td>'+(h.sym==="USDT"?"$1.00":fmtUsd(price))+'</td>'+
+          '<td>'+fmtUsd(val)+'</td>'+
+          '<td style="color:var(--fg-dim)">'+fmtKrw(val)+'</td>'+
+          '<td><div class="alloc-wrap"><div class="alloc-bar"><span style="width:'+alloc.toFixed(1)+'%"></span></div>'+alloc.toFixed(1)+'%</div></td>'+
+          '</tr>';
+      }).join("");
+    }
+    renderOrdersInto("orders2","ordersCount2");
+  }
+  function setTxt(id,t){ var e=document.getElementById(id); if(e) e.textContent=t; }
+
+  function syncCcyBtns(){
+    var t=showKrw?"Show in $ USD":"Show in ₩ KRW";
+    setTxt("ccyToggle",t); setTxt("ccyToggle2",t);
+  }
+  function toggleCcy(){showKrw=!showKrw;syncCcyBtns();renderWallet();}
+  document.getElementById("ccyToggle").addEventListener("click",toggleCcy);
+  document.getElementById("ccyToggle").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleCcy();}});
+  document.getElementById("ccyToggle2").addEventListener("click",toggleCcy);
+  document.getElementById("ccyToggle2").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleCcy();}});
+
+  // ---------- view switching (Trade <-> Profile/Wallet) ----------
+  function showView(v){
+    document.getElementById("view-trade").hidden = (v!=="trade");
+    document.getElementById("view-wallet").hidden = (v!=="wallet");
+    document.querySelectorAll("nav a").forEach(function(a){ a.classList.remove("active"); });
+    var navA=document.querySelector('nav a[data-view="'+v+'"]');
+    if(navA) navA.classList.add("active");
+    if(v==="wallet"){ renderProfile(); window.scrollTo(0,0); }
+  }
+  document.getElementById("userChip").addEventListener("click",function(){ showView("wallet"); });
+  document.getElementById("backBtn").addEventListener("click",function(){ showView("trade"); });
+  document.querySelectorAll("nav a").forEach(function(a){
+    a.addEventListener("click",function(e){ e.preventDefault(); var v=a.getAttribute("data-view"); if(v) showView(v); });
+  });
 
   // ---------- orders ----------
   var orders=[];
@@ -642,17 +792,19 @@
       return { time:t, pair:"BTC/USDT", side:r.side, type:r.type, price:r.price, amt:r.amt, total:r.total, status:r.status };
     });
   })();
-  function renderOrders(){
-    var el=document.getElementById("orders");
-    if(!orders.length){el.innerHTML='<tr class="orders-empty"><td colspan="8">No orders yet — place one from the trade panel above.</td></tr>';document.getElementById("ordersCount").textContent="0 orders";return;}
+  function renderOrdersInto(bodyId,countId){
+    var el=document.getElementById(bodyId); if(!el) return;
+    var cEl=countId?document.getElementById(countId):null;
+    if(!orders.length){el.innerHTML='<tr class="orders-empty"><td colspan="8">No orders yet — place one from the trade panel above.</td></tr>';if(cEl)cEl.textContent="0 orders";return;}
     var filled=orders.filter(function(o){return (o.status||"Filled")==="Filled";}).length;
-    document.getElementById("ordersCount").textContent=orders.length+" orders · "+filled+" filled";
+    if(cEl)cEl.textContent=orders.length+" orders · "+filled+" filled";
     el.innerHTML=orders.map(function(o){
       var st=o.status||"Filled";
       var pc=st==="Partial"?"pill partial":st==="Canceled"?"pill canceled":"pill";
       return '<tr><td style="text-align:left;color:var(--fg-dim)">'+o.time+'</td><td style="text-align:left">'+o.pair+'</td><td style="text-align:left"><span class="tag-side '+o.side+'">'+(o.side==="buy"?"Buy":"Sell")+'</span></td><td style="text-align:left">'+o.type+'</td><td>'+fmtP(o.price)+'</td><td>'+o.amt.toLocaleString("en-US",{maximumFractionDigits:5})+'</td><td>'+fmtP(o.total)+'</td><td style="text-align:left"><span class="'+pc+'">'+st+'</span></td></tr>';
     }).join("");
   }
+  function renderOrders(){ renderOrdersInto("orders","ordersCount"); }
 
   // ---------- trade panel ----------
   var side="buy", avail=80000;
@@ -689,7 +841,7 @@
     var mm=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     var t=mm[now.getMonth()]+" "+String(now.getDate()).padStart(2,"0")+", "+now.getFullYear()+"  "+String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
     orders.unshift({time:t,pair:selected.sym+"/USDT",side:side,type:otype,price:price,amt:amt,total:price*amt,status:"Filled"});
-    if(orders.length>300)orders.pop(); renderOrders();
+    if(orders.length>300)orders.pop(); renderOrders(); renderProfile();
     var orig=(side==="buy"?"Buy ":"Sell ")+selected.sym,b=this;
     this.textContent="✓ Order placed (demo)"; setTimeout(function(){b.textContent=orig;},1600);
   });
