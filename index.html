@@ -150,6 +150,7 @@
   .hold-val .sub { display: block; font-size: 11px; color: var(--fg-faint); }
 
   .markets, .orders { margin-top: 14px; }
+  .orders table { min-width: 780px; }
   .orders .panel-head { justify-content: space-between; }
   .orders-count { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
   .table-scroll { overflow-x: auto; }
@@ -169,6 +170,8 @@
   .tag-side { font-weight: 700; font-family: var(--sans); }
   .tag-side.buy { color: var(--up); } .tag-side.sell { color: var(--down); }
   .pill { display: inline-block; font-family: var(--sans); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: var(--up-soft); color: var(--up); }
+  .pill.partial { background: rgba(217,138,31,.14); color: var(--warn); }
+  .pill.canceled { background: var(--surface-2); color: var(--fg-faint); }
   .flash-up { animation: fu .5s; } .flash-down { animation: fd .5s; }
   @keyframes fu { 0% { background: var(--up-soft); } 100% { background: transparent; } }
   @keyframes fd { 0% { background: var(--down-soft); } 100% { background: transparent; } }
@@ -393,6 +396,47 @@
       .then(function(j){ if(j&&j.tether&&j.tether.krw) KRW_RATE=j.tether.krw; })
       .catch(function(){});
   }
+
+  // ---------- demo mode (used only when every live source is blocked) ----------
+  // Keeps the UI alive with simulated prices seeded near realistic levels,
+  // so the page is never an empty shell on networks that block the APIs.
+  var demoOn=false, demoTimer=null;
+  var DEMO_SEED={ bitcoin:124000, ethereum:4300, solana:205, ripple:2.4, cardano:0.72, dogecoin:0.21 };
+  function startDemo(){
+    if(demoOn) return;
+    demoOn=true;
+    assets.forEach(function(a){
+      if(!a.price){
+        var base=DEMO_SEED[a.id]||100;
+        a.price=base; a.base=base;
+        a.chg=(Math.random()*8-3);
+        a.high=base*1.03; a.low=base*0.97;
+        a.vol=(Math.random()*2+0.5)*1e9;
+        a.lastDir=1;
+      }
+    });
+    if(!series.length){ // build a plausible chart series for the selected pair
+      var p=selected.price*0.97;
+      series=[];
+      for(var i=0;i<120;i++){ p*=(1+(Math.random()-0.49)*0.01); series.push(p); }
+      series.push(selected.price);
+    }
+    renderTicker(); renderMarkets(); renderStats(); renderBook(); renderWallet(); drawChart();
+    document.getElementById("srcLabel").textContent="Demo mode — live price feed unavailable on this network";
+    setLive(false,"demo");
+    demoTimer=setInterval(function(){
+      assets.forEach(function(a){
+        var d=(Math.random()-0.5)*a.price*0.004;
+        a.prevPrice=a.price; a.price=Math.max(a.price+d, (a.base||a.price)*0.5);
+        a.lastDir=d>=0?1:-1;
+        if(a.price>a.high)a.high=a.price; if(a.price<a.low)a.low=a.price;
+        a.chg=a.base?((a.price-a.base)/a.base*100):a.chg;
+      });
+      if(series.length){ series.push(selected.price); if(series.length>400)series.shift(); }
+      renderTicker(); renderMarkets(); flashMarkets(); renderStats(); renderBook(); renderWallet(); drawChart();
+    }, 1200);
+  }
+  function stopDemo(){ demoOn=false; if(demoTimer){ clearInterval(demoTimer); demoTimer=null; } }
   // price history for the chart (last ~1 day, hourly)
   var series=[];
   function fetchChart(){
@@ -410,7 +454,7 @@
     var url="wss://stream.binance.com:9443/stream?streams="+streams;
     try { ws=new WebSocket(url); } catch(e){ fallbackToPolling(); return; }
     var openTimer=setTimeout(function(){ if(!wsAlive){ try{ws.close();}catch(e){} fallbackToPolling(); } }, 6000);
-    ws.onopen=function(){ clearTimeout(openTimer); wsAlive=true; stopPolling(); setLive(true,"live · Binance"); };
+    ws.onopen=function(){ clearTimeout(openTimer); wsAlive=true; stopPolling(); stopDemo(); document.getElementById("srcLabel").textContent="Source: Binance live feed"; setLive(true,"live · Binance"); };
     ws.onmessage=function(ev){
       lastWsMsg=Date.now();
       var msg; try{ msg=JSON.parse(ev.data); }catch(e){ return; }
@@ -428,7 +472,8 @@
     ws.onerror=function(){ /* onclose handles recovery */ };
     ws.onclose=function(){
       wsAlive=false;
-      if(!document.hidden){ setLive(false,"reconnecting…"); setTimeout(startWs,3000); }
+      if(demoOn) return;                 // demo is driving the UI; don't fight it
+      if(!document.hidden){ setLive(false,"reconnecting…"); setTimeout(function(){ if(!demoOn) startWs(); },3000); }
     };
   }
   // paint at ~4fps from whatever the socket has delivered
@@ -559,12 +604,53 @@
 
   // ---------- orders ----------
   var orders=[];
+  // seed a realistic BTC/USDT trade history from ~4 years back to today.
+  // prices track the rough real BTC range for each period so it reads as genuine.
+  (function seedHistory(){
+    // [year, month(0-11), approx BTC price band low..high]
+    var bands=[
+      [2022,0,38000,44000],[2022,2,38000,47000],[2022,5,19000,31000],[2022,8,18500,22000],[2022,11,16500,18500],
+      [2023,1,21000,24000],[2023,3,27000,30000],[2023,6,26000,31000],[2023,9,26000,28000],[2023,11,37000,44000],
+      [2024,0,42000,48000],[2024,2,62000,73000],[2024,5,60000,71000],[2024,8,56000,66000],[2024,10,69000,93000],
+      [2025,0,92000,106000],[2025,2,82000,95000],[2025,5,100000,112000],[2025,8,108000,124000],[2025,11,95000,118000],
+      [2026,0,98000,112000],[2026,3,104000,122000],[2026,6,112000,131000],[2026,8,118000,139000]
+    ];
+    var types=["Limit","Limit","Limit","Market","Market","Stop"];
+    var rows=[];
+    bands.forEach(function(b){
+      var count=2+Math.floor(Math.random()*3); // 2-4 trades per band
+      for(var k=0;k<count;k++){
+        var day=1+Math.floor(Math.random()*27);
+        var hr=Math.floor(Math.random()*24), mn=Math.floor(Math.random()*60);
+        var price=b[2]+Math.random()*(b[3]-b[2]);
+        var amt=+(0.02+Math.random()*0.9).toFixed(4);
+        var side=Math.random()<0.52?"buy":"sell";
+        var r=Math.random();
+        var status=r<0.82?"Filled":r<0.93?"Partial":"Canceled";
+        rows.push({
+          d:new Date(b[0],b[1],day,hr,mn),
+          side:side, type:types[Math.floor(Math.random()*types.length)],
+          price:price, amt:amt, total:price*amt, status:status
+        });
+      }
+    });
+    rows.sort(function(a,b){return b.d-a.d;}); // newest first
+    var mm=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    orders=rows.map(function(r){
+      var t=mm[r.d.getMonth()]+" "+String(r.d.getDate()).padStart(2,"0")+", "+r.d.getFullYear()+"  "+
+            String(r.d.getHours()).padStart(2,"0")+":"+String(r.d.getMinutes()).padStart(2,"0");
+      return { time:t, pair:"BTC/USDT", side:r.side, type:r.type, price:r.price, amt:r.amt, total:r.total, status:r.status };
+    });
+  })();
   function renderOrders(){
     var el=document.getElementById("orders");
-    if(!orders.length){el.innerHTML='<tr class="orders-empty"><td colspan="8">No orders yet — place one from the trade panel above.</td></tr>';document.getElementById("ordersCount").textContent="0 filled";return;}
-    document.getElementById("ordersCount").textContent=orders.length+" filled";
+    if(!orders.length){el.innerHTML='<tr class="orders-empty"><td colspan="8">No orders yet — place one from the trade panel above.</td></tr>';document.getElementById("ordersCount").textContent="0 orders";return;}
+    var filled=orders.filter(function(o){return (o.status||"Filled")==="Filled";}).length;
+    document.getElementById("ordersCount").textContent=orders.length+" orders · "+filled+" filled";
     el.innerHTML=orders.map(function(o){
-      return '<tr><td style="text-align:left;color:var(--fg-dim)">'+o.time+'</td><td style="text-align:left">'+o.pair+'</td><td style="text-align:left"><span class="tag-side '+o.side+'">'+(o.side==="buy"?"Buy":"Sell")+'</span></td><td style="text-align:left">'+o.type+'</td><td>'+fmtP(o.price)+'</td><td>'+o.amt.toLocaleString("en-US",{maximumFractionDigits:5})+'</td><td>'+fmtP(o.total)+'</td><td style="text-align:left"><span class="pill">Filled</span></td></tr>';
+      var st=o.status||"Filled";
+      var pc=st==="Partial"?"pill partial":st==="Canceled"?"pill canceled":"pill";
+      return '<tr><td style="text-align:left;color:var(--fg-dim)">'+o.time+'</td><td style="text-align:left">'+o.pair+'</td><td style="text-align:left"><span class="tag-side '+o.side+'">'+(o.side==="buy"?"Buy":"Sell")+'</span></td><td style="text-align:left">'+o.type+'</td><td>'+fmtP(o.price)+'</td><td>'+o.amt.toLocaleString("en-US",{maximumFractionDigits:5})+'</td><td>'+fmtP(o.total)+'</td><td style="text-align:left"><span class="'+pc+'">'+st+'</span></td></tr>';
     }).join("");
   }
 
@@ -600,8 +686,10 @@
     var price=parseFloat(document.getElementById("f-price").value)||selected.price;
     var otype=document.querySelector("#otypes button.active").textContent;
     var now=new Date();
-    orders.unshift({time:String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0")+":"+String(now.getSeconds()).padStart(2,"0"),pair:selected.sym+"/USDT",side:side,type:otype,price:price,amt:amt,total:price*amt});
-    if(orders.length>12)orders.pop(); renderOrders();
+    var mm=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var t=mm[now.getMonth()]+" "+String(now.getDate()).padStart(2,"0")+", "+now.getFullYear()+"  "+String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+    orders.unshift({time:t,pair:selected.sym+"/USDT",side:side,type:otype,price:price,amt:amt,total:price*amt,status:"Filled"});
+    if(orders.length>300)orders.pop(); renderOrders();
     var orig=(side==="buy"?"Buy ":"Sell ")+selected.sym,b=this;
     this.textContent="✓ Order placed (demo)"; setTimeout(function(){b.textContent=orig;},1600);
   });
@@ -617,12 +705,14 @@
 
   // ---------- refresh loop ----------
   function refreshAll(){
+    if(demoOn) return;
     fetchMarkets().then(function(){
       renderTicker(); renderMarkets(); flashMarkets(); renderStats(); renderBook(); renderWallet();
     }).catch(function(e){
       setLive(false,"offline — retrying");
     });
   }
+  function haveLivePrice(){ return assets.some(function(a){return a.price>0;}); }
 
   function startEngine(){
     drawChart();
@@ -630,23 +720,26 @@
     setLive(false,"connecting…");
     // 1) fast first paint + chart history from CoinGecko REST
     Promise.all([fetchMarkets().catch(function(){}), fetchKrw()]).then(function(){
+      if(demoOn) return;
       renderTicker(); renderMarkets(); renderStats(); renderBook(); renderWallet();
       document.getElementById("f-price").value=fmtP(selected.price);
     });
-    fetchChart().catch(function(){ chart.innerHTML='<text x="12" y="150" fill="var(--fg-faint)" font-size="12" font-family="var(--mono)">chart unavailable (rate-limited)</text>'; });
+    fetchChart().catch(function(){ /* demo watchdog will seed a chart if needed */ });
     // 2) real-time prices via Binance WebSocket (falls back to CG polling on failure)
     startWs();
     setInterval(wsPaintLoop, 250);                 // batched repaint ~4fps
     // 3) append the live price onto the chart series as it ticks
     setInterval(function(){
-      if(series.length && selected.price){ series.push(selected.price); if(series.length>400) series.shift(); drawChart(); }
+      if(!demoOn && series.length && selected.price){ series.push(selected.price); if(series.length>400) series.shift(); drawChart(); }
     }, 3000);
     // 4) periodic chart-history refresh + KRW rate
-    setInterval(function(){ fetchChart().catch(function(){}); }, 120000);
+    setInterval(function(){ if(!demoOn) fetchChart().catch(function(){}); }, 120000);
     setInterval(fetchKrw, 300000);
+    // 5) watchdog: if nothing live arrives within 8s, switch to demo so the page isn't empty
+    setTimeout(function(){ if(!haveLivePrice() && !wsAlive){ startDemo(); } }, 8000);
     // reconnect socket when tab becomes visible again
     document.addEventListener("visibilitychange",function(){
-      if(!document.hidden && !wsAlive && !cgPoll){ startWs(); }
+      if(!document.hidden && !wsAlive && !cgPoll && !demoOn){ startWs(); }
     });
   }
 })();
