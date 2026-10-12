@@ -470,6 +470,8 @@
           a.vol=row.total_volume||0;
           a.lastDir = a.price>=a.prevPrice ? 1 : -1;
         });
+        liveEverArrived=true; stopDemo();
+        document.getElementById("srcLabel").textContent="Source: CoinGecko public API";
         setLive(true,"live · CoinGecko");
       });
   }
@@ -483,11 +485,10 @@
   // ---------- demo mode (used only when every live source is blocked) ----------
   // Keeps the UI alive with simulated prices seeded near realistic levels,
   // so the page is never an empty shell on networks that block the APIs.
-  var demoOn=false, demoTimer=null;
+  var demoOn=false, demoTimer=null, liveEverArrived=false;
   var DEMO_SEED={ bitcoin:124000, ethereum:4300, solana:205, ripple:2.4, cardano:0.72, dogecoin:0.21 };
-  function startDemo(){
-    if(demoOn) return;
-    demoOn=true;
+  // fill plausible starting numbers so the page is populated from the first frame
+  function seedDemoPrices(){
     assets.forEach(function(a){
       if(!a.price){
         var base=DEMO_SEED[a.id]||100;
@@ -498,13 +499,17 @@
         a.lastDir=1;
       }
     });
-    if(!series.length){ // build a plausible chart series for the selected pair
-      var p=selected.price*0.97;
-      series=[];
+    if(!series.length){
+      var p=selected.price*0.97; series=[];
       for(var i=0;i<120;i++){ p*=(1+(Math.random()-0.49)*0.01); series.push(p); }
       series.push(selected.price);
     }
     renderTicker(); renderMarkets(); renderStats(); renderBook(); renderWallet(); drawChart();
+  }
+  function startDemo(){
+    if(demoOn || liveEverArrived) return;
+    demoOn=true;
+    seedDemoPrices();
     document.getElementById("srcLabel").textContent="Demo mode — live price feed unavailable on this network";
     setLive(false,"demo");
     demoTimer=setInterval(function(){
@@ -537,7 +542,7 @@
     var url="wss://stream.binance.com:9443/stream?streams="+streams;
     try { ws=new WebSocket(url); } catch(e){ fallbackToPolling(); return; }
     var openTimer=setTimeout(function(){ if(!wsAlive){ try{ws.close();}catch(e){} fallbackToPolling(); } }, 6000);
-    ws.onopen=function(){ clearTimeout(openTimer); wsAlive=true; stopPolling(); stopDemo(); document.getElementById("srcLabel").textContent="Source: Binance live feed"; setLive(true,"live · Binance"); };
+    ws.onopen=function(){ clearTimeout(openTimer); wsAlive=true; liveEverArrived=true; stopPolling(); stopDemo(); document.getElementById("srcLabel").textContent="Source: Binance live feed"; setLive(true,"live · Binance"); };
     ws.onmessage=function(ev){
       lastWsMsg=Date.now();
       var msg; try{ msg=JSON.parse(ev.data); }catch(e){ return; }
@@ -867,31 +872,34 @@
   function haveLivePrice(){ return assets.some(function(a){return a.price>0;}); }
 
   function startEngine(){
-    drawChart();
-    renderWallet(); renderOrders();
+    renderOrders();
+    // 0) populate the screen instantly with seeded prices — never show an empty shell
+    seedDemoPrices();
+    document.getElementById("f-price").value=fmtP(selected.price);
     setLive(false,"connecting…");
-    // 1) fast first paint + chart history from CoinGecko REST
+    // 1) try live history + markets from CoinGecko REST (swaps in if it arrives)
     Promise.all([fetchMarkets().catch(function(){}), fetchKrw()]).then(function(){
-      if(demoOn) return;
-      renderTicker(); renderMarkets(); renderStats(); renderBook(); renderWallet();
-      document.getElementById("f-price").value=fmtP(selected.price);
+      if(liveEverArrived){
+        renderTicker(); renderMarkets(); renderStats(); renderBook(); renderWallet();
+        document.getElementById("f-price").value=fmtP(selected.price);
+      }
     });
-    fetchChart().catch(function(){ /* demo watchdog will seed a chart if needed */ });
-    // 2) real-time prices via Binance WebSocket (falls back to CG polling on failure)
+    fetchChart().catch(function(){ /* seeded series already drawn */ });
+    // 2) real-time prices via Binance WebSocket (preferred when reachable)
     startWs();
     setInterval(wsPaintLoop, 250);                 // batched repaint ~4fps
-    // 3) append the live price onto the chart series as it ticks
+    // 3) append live price onto the chart series as it ticks
     setInterval(function(){
       if(!demoOn && series.length && selected.price){ series.push(selected.price); if(series.length>400) series.shift(); drawChart(); }
     }, 3000);
     // 4) periodic chart-history refresh + KRW rate
     setInterval(function(){ if(!demoOn) fetchChart().catch(function(){}); }, 120000);
     setInterval(fetchKrw, 300000);
-    // 5) watchdog: if nothing live arrives within 8s, switch to demo so the page isn't empty
-    setTimeout(function(){ if(!haveLivePrice() && !wsAlive){ startDemo(); } }, 8000);
+    // 5) watchdog: if no live feed within 3.5s, start the animated demo so prices move
+    setTimeout(function(){ if(!liveEverArrived){ startDemo(); } }, 3500);
     // reconnect socket when tab becomes visible again
     document.addEventListener("visibilitychange",function(){
-      if(!document.hidden && !wsAlive && !cgPoll && !demoOn){ startWs(); }
+      if(!document.hidden && !wsAlive && !cgPoll && !demoOn && !liveEverArrived){ startWs(); }
     });
   }
 })();
