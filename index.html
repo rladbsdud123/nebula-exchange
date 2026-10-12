@@ -260,7 +260,7 @@
     <div class="login-field"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password" required></div>
     <p class="login-err" id="loginErr"></p>
     <button class="login-submit" type="submit">Sign in</button>
-    <p class="login-hint">Private demo terminal. Set your own credentials on first sign-in — they're stored only in this browser.</p>
+    <p class="login-hint">Private demo terminal. Set your own credentials on first sign-in — they're stored only in this browser. <a href="#" id="resetCred" style="color:var(--accent);font-weight:600;text-decoration:none">Reset credentials</a></p>
   </form>
 </div>
 
@@ -404,7 +404,7 @@
 
   <footer>
     <span>Nebula Exchange — a fictional trading UI. Prices are real market data (CoinGecko); orders and balances are simulated. Not a real exchange.</span>
-    <span class="disc">v1.2 · wallet + auto-logout</span>
+    <span class="disc">v1.3 · routed views</span>
   </footer>
 </div>
 
@@ -431,6 +431,7 @@
     var pn=document.getElementById("profileName"); if(pn) pn.textContent=u?"@"+u:"@user";
     var av=document.getElementById("avatarBig"); if(av) av.textContent=(u||"N").charAt(0).toUpperCase();
     if(!started){started=true;startEngine();}
+    applyView(viewFromHash());   // honor #wallet / #trade on entry
   }
   (function initGate(){
     var sess=ssGet(SESSION); if(sess){enterApp(sess);return;}
@@ -446,6 +447,16 @@
     });
   })();
   document.getElementById("logoutBtn").addEventListener("click",function(){ssDel(SESSION);location.reload();});
+  // reset credentials — clears the stored username/password so a new one can be set
+  var rc=document.getElementById("resetCred");
+  if(rc) rc.addEventListener("click",function(e){
+    e.preventDefault();
+    lsDel(STORE); ssDel(SESSION);
+    document.getElementById("l-user").value=""; document.getElementById("l-pass").value="";
+    document.getElementById("loginErr").textContent="";
+    var sub=document.querySelector(".login-sub"); if(sub) sub.textContent="Create your credentials — first sign-in sets them";
+    document.getElementById("l-user").focus();
+  });
 
   // ---------- theme ----------
   var root=document.documentElement;
@@ -821,8 +832,9 @@
   if(bd) bd.addEventListener("click",function(){ flashBtn(this,"Demo only"); });
   if(bw) bw.addEventListener("click",function(){ flashBtn(this,"Demo only"); });
 
-  // ---------- view switching (Trade <-> Profile/Wallet) ----------
-  function showView(v){
+  // ---------- view switching with hash routing (#trade / #wallet) ----------
+  function applyView(v){
+    v = (v==="wallet") ? "wallet" : "trade";
     document.getElementById("view-trade").hidden = (v!=="trade");
     document.getElementById("view-wallet").hidden = (v!=="wallet");
     document.querySelectorAll("nav a").forEach(function(a){ a.classList.remove("active"); });
@@ -830,6 +842,14 @@
     if(navA) navA.classList.add("active");
     if(v==="wallet"){ renderProfile(); window.scrollTo(0,0); }
   }
+  function showView(v){
+    // update the URL hash; the hashchange handler then renders the view
+    var target = (v==="wallet") ? "wallet" : "trade";
+    if((location.hash||"").replace("#","") === target){ applyView(target); }
+    else { location.hash = target; }
+  }
+  function viewFromHash(){ return (location.hash||"").replace("#","")==="wallet" ? "wallet" : "trade"; }
+  window.addEventListener("hashchange", function(){ applyView(viewFromHash()); });
   document.getElementById("userChip").addEventListener("click",function(){ showView("wallet"); });
   document.getElementById("backBtn").addEventListener("click",function(){ showView("trade"); });
   document.querySelectorAll("nav a").forEach(function(a){
