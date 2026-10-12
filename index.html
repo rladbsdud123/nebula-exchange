@@ -195,13 +195,35 @@
   .pf-big { font-family: var(--mono); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
   .pf-sub { font-family: var(--mono); font-size: 13px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
   .pf-section { margin-top: 14px; }
-  .holdings-table, .orders-table { min-width: 680px; }
+  .holdings-table, .orders-table { min-width: 820px; }
   .holdings-table td { padding: 14px 16px; }
   .alloc-wrap { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
   .alloc-bar { width: 72px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
-  .alloc-bar span { display: block; height: 100%; background: var(--accent); }
-  @media (max-width: 680px) {
+  .alloc-bar span { display: block; height: 100%; }
+
+  /* hero: valuation stats + allocation donut */
+  .pf-hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-top: 14px; }
+  .pf-hero .panel { padding: 22px; }
+  .pf-valuation .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--fg-faint); font-weight: 600; }
+  .pf-valuation .big { font-family: var(--mono); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; margin: 4px 0 2px; }
+  .pf-valuation .alt { font-family: var(--mono); font-size: 13px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+  .pf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .pf-stat .k { font-size: 11px; color: var(--fg-faint); font-weight: 600; margin-bottom: 3px; }
+  .pf-stat .v { font-family: var(--mono); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .pf-actions { display: flex; gap: 8px; margin-top: 20px; }
+  .pf-actions button { flex: 1; padding: 11px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--fg); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .pf-actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pf-actions button:hover { border-color: var(--accent); }
+  .pf-donut { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  .pf-donut .donut-title { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--fg-faint); font-weight: 600; align-self: flex-start; }
+  .donut-legend { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+  .donut-legend .row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .donut-legend .dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .donut-legend .nm { font-weight: 600; }
+  .donut-legend .pct { margin-left: auto; font-family: var(--mono); color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+  @media (max-width: 760px) {
     .pf-summary { grid-template-columns: 1fr; }
+    .pf-hero { grid-template-columns: 1fr; }
   }
 
   #gate { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: radial-gradient(900px 500px at 80% -10%, var(--accent-soft), transparent 60%), var(--bg); }
@@ -337,31 +359,36 @@
           <div class="profile-meta">Nebula account · member since Aug 2022 · <span id="pf-src">—</span></div>
         </div>
       </div>
-      <span class="wallet-ccy" id="ccyToggle2" role="button" tabindex="0">Show in ₩ KRW</span>
+      <span class="wallet-ccy" id="ccyToggle2" role="button" tabindex="0">Show in $ USD</span>
     </div>
 
-    <div class="pf-summary">
-      <div class="panel pf-card">
-        <span class="lbl">Total portfolio value</span>
-        <div class="pf-big" id="pfTotal">—</div>
-        <div class="pf-sub" id="pfTotalAlt">—</div>
+    <div class="pf-hero">
+      <div class="panel pf-valuation">
+        <span class="lbl">Total valuation</span>
+        <div class="big" id="pfTotal">—</div>
+        <div class="alt" id="pfTotalAlt">—</div>
+        <div class="pf-stats">
+          <div class="pf-stat"><div class="k">Total buy (cost)</div><div class="v" id="pfBuy">—</div></div>
+          <div class="pf-stat"><div class="k">Valuation P&amp;L</div><div class="v" id="pfPnl">—</div></div>
+          <div class="pf-stat"><div class="k">Return</div><div class="v" id="pfPnlPct">—</div></div>
+          <div class="pf-stat"><div class="k">Total trades</div><div class="v" id="pfTrades">—</div></div>
+        </div>
+        <div class="pf-actions">
+          <button class="primary" id="btnDeposit">Deposit</button>
+          <button id="btnWithdraw">Withdraw</button>
+        </div>
       </div>
-      <div class="panel pf-card">
-        <span class="lbl">All-time P&amp;L (demo)</span>
-        <div class="pf-big" id="pfPnl">—</div>
-        <div class="pf-sub" id="pfPnlPct">—</div>
-      </div>
-      <div class="panel pf-card">
-        <span class="lbl">Total trades</span>
-        <div class="pf-big" id="pfTrades">—</div>
-        <div class="pf-sub" id="pfTradesSub">—</div>
+      <div class="panel pf-donut">
+        <span class="donut-title">Asset allocation</span>
+        <svg id="donut" width="150" height="150" viewBox="0 0 150 150" aria-label="Asset allocation"></svg>
+        <div class="donut-legend" id="donutLegend"></div>
       </div>
     </div>
 
     <div class="panel pf-section">
       <div class="panel-head"><h2>My Coins</h2></div>
       <div class="table-scroll"><table class="holdings-table">
-        <thead><tr><th>Asset</th><th>Holdings</th><th>Price</th><th>Value</th><th>Value (KRW)</th><th>Allocation</th></tr></thead>
+        <thead><tr><th>Asset</th><th>Holdings</th><th>Avg buy</th><th>Last price</th><th>Buy amount</th><th>Valuation</th><th>P&amp;L</th><th>Return</th></tr></thead>
         <tbody id="holdings2"></tbody>
       </table></div>
     </div>
@@ -377,7 +404,7 @@
 
   <footer>
     <span>Nebula Exchange — a fictional trading UI. Prices are real market data (CoinGecko); orders and balances are simulated. Not a real exchange.</span>
-    <span class="disc">v1.0 · live-data build</span>
+    <span class="disc">v1.2 · wallet + auto-logout</span>
   </footer>
 </div>
 
@@ -391,6 +418,11 @@
   function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
   function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
   function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
+  // session lives in sessionStorage → closing the tab/window auto-logs-out.
+  // credentials (STORE) stay in localStorage so the user can sign back in.
+  function ssGet(k){try{return sessionStorage.getItem(k);}catch(e){return null;}}
+  function ssSet(k,v){try{sessionStorage.setItem(k,v);}catch(e){}}
+  function ssDel(k){try{sessionStorage.removeItem(k);}catch(e){}}
   function hash(s){var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return String(h>>>0);}
   var gate=document.getElementById("gate"),app=document.getElementById("app"),started=false;
   function enterApp(u){
@@ -401,7 +433,7 @@
     if(!started){started=true;startEngine();}
   }
   (function initGate(){
-    var sess=lsGet(SESSION); if(sess){enterApp(sess);return;}
+    var sess=ssGet(SESSION); if(sess){enterApp(sess);return;}
     var form=document.getElementById("loginForm"),err=document.getElementById("loginErr"),sub=form.querySelector(".login-sub");
     if(!lsGet(STORE)) sub.textContent="Create your credentials — first sign-in sets them";
     form.addEventListener("submit",function(e){
@@ -409,11 +441,11 @@
       var u=document.getElementById("l-user").value.trim(),p=document.getElementById("l-pass").value;
       if(u.length<2||p.length<4){err.textContent="Username 2+ chars, password 4+ chars.";return;}
       var token=hash(u+":"+p),saved=lsGet(STORE);
-      if(!saved){lsSet(STORE,u+"|"+token);lsSet(SESSION,u);enterApp(u);}
-      else{var parts=saved.split("|");if(parts[0]===u&&parts[1]===token){lsSet(SESSION,u);enterApp(u);}else{err.textContent="Incorrect username or password.";document.getElementById("l-pass").value="";}}
+      if(!saved){lsSet(STORE,u+"|"+token);ssSet(SESSION,u);enterApp(u);}
+      else{var parts=saved.split("|");if(parts[0]===u&&parts[1]===token){ssSet(SESSION,u);enterApp(u);}else{err.textContent="Incorrect username or password.";document.getElementById("l-pass").value="";}}
     });
   })();
-  document.getElementById("logoutBtn").addEventListener("click",function(){lsDel(SESSION);location.reload();});
+  document.getElementById("logoutBtn").addEventListener("click",function(){ssDel(SESSION);location.reload();});
 
   // ---------- theme ----------
   var root=document.documentElement;
@@ -438,7 +470,8 @@
   var KRW_RATE = 1362.5;                   // fallback; replaced by live USD→KRW
   var CG = "https://api.coingecko.com/api/v3";
 
-  var holdings = [ { sym: "BTC", amt: 3.5 }, { sym: "USDT", amt: 80000 } ];
+  // amt = quantity held; avg = average buy price in USD (USDT is cash, avg 1)
+  var holdings = [ { sym: "BTC", amt: 3.5, avg: 42000 }, { sym: "USDT", amt: 80000, avg: 1 } ];
 
   function fmtP(n){
     if(n>=1000) return n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -669,7 +702,7 @@
   }
 
   // ---------- wallet ----------
-  var showKrw=false;
+  var showKrw=true;   // KRW primary by default (Korean exchange convention)
   function priceOf(sym){ if(sym==="USDT")return 1; var a=assets.filter(function(x){return x.sym===sym;})[0]; return a?a.price:0; }
   function fmtKrw(usd){return "₩"+Math.round(usd*KRW_RATE).toLocaleString("en-US");}
   function fmtUsd(usd){return "$"+usd.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -687,48 +720,87 @@
     renderProfile(total);
   }
 
-  // cost basis for a simple demo P&L: what the holdings "cost" historically
-  var COST_BASIS_USD = 3.5*42000 + 80000;   // 3.5 BTC bought ~avg $42k + 80k USDT deposited
-  function renderProfile(total){
-    if(document.getElementById("view-wallet").hidden) {
-      // still keep numbers fresh for when it opens; cheap enough
-    }
-    if(total==null){ total=0; holdings.forEach(function(h){total+=h.amt*priceOf(h.sym);}); }
-    var pct=showKrw?fmtKrw(total):fmtUsd(total);
-    var alt=showKrw?("≈ "+fmtUsd(total)+" USD"):("≈ "+fmtKrw(total));
-    setTxt("pfTotal",pct); setTxt("pfTotalAlt",alt);
-    // P&L
-    var pnl=total-COST_BASIS_USD;
-    var pnlStr=(pnl>=0?"+":"-")+(showKrw?fmtKrw(Math.abs(pnl)):fmtUsd(Math.abs(pnl)));
-    var pnlPct=((pnl/COST_BASIS_USD)*100);
+  // currency helpers for the wallet page (primary = current toggle, secondary = the other)
+  function prim(usd){ return showKrw?fmtKrw(usd):fmtUsd(usd); }
+  function sec(usd){ return showKrw?fmtUsd(usd):fmtKrw(usd); }
+  function signed(usd){ return (usd>=0?"+":"-")+prim(Math.abs(usd)); }
+
+  function renderProfile(){
+    // per-asset figures
+    var totalVal=0, totalBuy=0;
+    var rows=holdings.map(function(h){
+      var a=assets.filter(function(x){return x.sym===h.sym;})[0];
+      var price=priceOf(h.sym);
+      var val=h.amt*price, buy=h.amt*(h.avg||price);
+      totalVal+=val; totalBuy+=buy;
+      return { h:h, a:a, price:price, val:val, buy:buy, pnl:val-buy,
+               ret:buy>0?((val-buy)/buy*100):0,
+               color:a?a.color:"#26a17b", full:a?a.name:"Tether" };
+    });
+    var totalPnl=totalVal-totalBuy, totalRet=totalBuy>0?(totalPnl/totalBuy*100):0;
+
+    // hero
+    setTxt("pfTotal",prim(totalVal));
+    setTxt("pfTotalAlt","≈ "+sec(totalVal));
+    setTxt("pfBuy",prim(totalBuy));
     var pn=document.getElementById("pfPnl");
-    if(pn){ pn.textContent=pnlStr; pn.className="pf-big "+(pnl>=0?"up":"down"); }
-    setTxt("pfPnlPct",(pnl>=0?"+":"")+pnlPct.toFixed(2)+"% all-time");
-    // trades
+    if(pn){ pn.textContent=signed(totalPnl); pn.className="v "+(totalPnl>=0?"up":"down"); }
+    var pr=document.getElementById("pfPnlPct");
+    if(pr){ pr.textContent=(totalPnl>=0?"+":"")+totalRet.toFixed(2)+"%"; pr.className="v "+(totalPnl>=0?"up":"down"); }
     var filled=orders.filter(function(o){return (o.status||"Filled")==="Filled";}).length;
-    setTxt("pfTrades",String(orders.length));
-    setTxt("pfTradesSub",filled+" filled · BTC/USDT");
+    setTxt("pfTrades",orders.length+" ("+filled+" filled)");
     setTxt("pf-src",demoOn?"demo data":(wsAlive?"live · Binance":"live"));
-    // holdings table
+
+    // donut + legend
+    drawDonut(rows, totalVal);
+
+    // coins table
     var hEl=document.getElementById("holdings2");
     if(hEl){
-      hEl.innerHTML=holdings.map(function(h){
-        var a=assets.filter(function(x){return x.sym===h.sym;})[0];
-        var color=a?a.color:"#26a17b", full=a?a.name:"Tether";
-        var price=priceOf(h.sym), val=h.amt*price;
-        var alloc=total>0?(val/total*100):0;
-        var amtStr=h.sym==="USDT"?h.amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):h.amt.toLocaleString("en-US",{minimumFractionDigits:4,maximumFractionDigits:4});
+      hEl.innerHTML=rows.map(function(r){
+        var sym=r.h.sym;
+        var amtStr=sym==="USDT"?r.h.amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):r.h.amt.toLocaleString("en-US",{minimumFractionDigits:4,maximumFractionDigits:4});
+        var pnlCls=r.pnl>0?"up":r.pnl<0?"down":"";
+        var pnlTxt=sym==="USDT"?"—":signed(r.pnl);
+        var retTxt=sym==="USDT"?"—":((r.pnl>=0?"+":"")+r.ret.toFixed(2)+"%");
         return '<tr>'+
-          '<td style="text-align:left"><div class="coin"><span class="ci" style="background:'+color+'">'+h.sym.charAt(0)+'</span><span><div class="nm">'+h.sym+'</div><div class="fn">'+full+'</div></span></div></td>'+
-          '<td>'+amtStr+' '+h.sym+'</td>'+
-          '<td>'+(h.sym==="USDT"?"$1.00":fmtUsd(price))+'</td>'+
-          '<td>'+fmtUsd(val)+'</td>'+
-          '<td style="color:var(--fg-dim)">'+fmtKrw(val)+'</td>'+
-          '<td><div class="alloc-wrap"><div class="alloc-bar"><span style="width:'+alloc.toFixed(1)+'%"></span></div>'+alloc.toFixed(1)+'%</div></td>'+
+          '<td style="text-align:left"><div class="coin"><span class="ci" style="background:'+r.color+'">'+sym.charAt(0)+'</span><span><div class="nm">'+sym+'</div><div class="fn">'+r.full+'</div></span></div></td>'+
+          '<td>'+amtStr+' '+sym+'</td>'+
+          '<td>'+(sym==="USDT"?"—":fmtUsd(r.h.avg))+'</td>'+
+          '<td>'+(sym==="USDT"?"$1.00":fmtUsd(r.price))+'</td>'+
+          '<td>'+prim(r.buy)+'</td>'+
+          '<td>'+prim(r.val)+'</td>'+
+          '<td class="'+pnlCls+'">'+pnlTxt+'</td>'+
+          '<td class="'+pnlCls+'">'+retTxt+'</td>'+
           '</tr>';
       }).join("");
     }
     renderOrdersInto("orders2","ordersCount2");
+  }
+
+  function drawDonut(rows, total){
+    var svg=document.getElementById("donut"); if(!svg) return;
+    var cx=75, cy=75, r=54, sw=20, C=2*Math.PI*r;
+    var s='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--surface-2)" stroke-width="'+sw+'"/>';
+    var off=0;
+    rows.forEach(function(row){
+      if(total<=0||row.val<=0) return;
+      var frac=row.val/total, len=frac*C;
+      s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+row.color+'" stroke-width="'+sw+
+         '" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+
+         '" transform="rotate(-90 '+cx+' '+cy+')"/>';
+      off+=len;
+    });
+    s+='<text x="'+cx+'" y="'+(cy-3)+'" text-anchor="middle" fill="var(--fg-faint)" font-size="9" font-family="var(--mono)">ASSETS</text>';
+    s+='<text x="'+cx+'" y="'+(cy+12)+'" text-anchor="middle" fill="var(--fg)" font-size="16" font-weight="700" font-family="var(--mono)">'+rows.length+'</text>';
+    svg.innerHTML=s;
+    var leg=document.getElementById("donutLegend");
+    if(leg){
+      leg.innerHTML=rows.map(function(row){
+        var pct=total>0?(row.val/total*100):0;
+        return '<div class="row"><span class="dot" style="background:'+row.color+'"></span><span class="nm">'+row.h.sym+'</span><span class="pct">'+pct.toFixed(1)+'%</span></div>';
+      }).join("");
+    }
   }
   function setTxt(id,t){ var e=document.getElementById(id); if(e) e.textContent=t; }
 
@@ -741,6 +813,13 @@
   document.getElementById("ccyToggle").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleCcy();}});
   document.getElementById("ccyToggle2").addEventListener("click",toggleCcy);
   document.getElementById("ccyToggle2").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleCcy();}});
+  syncCcyBtns();
+
+  // deposit / withdraw (demo — shows a transient confirmation, no real transfer)
+  function flashBtn(btn,msg){ var o=btn.textContent; btn.textContent=msg; setTimeout(function(){btn.textContent=o;},1500); }
+  var bd=document.getElementById("btnDeposit"), bw=document.getElementById("btnWithdraw");
+  if(bd) bd.addEventListener("click",function(){ flashBtn(this,"Demo only"); });
+  if(bw) bw.addEventListener("click",function(){ flashBtn(this,"Demo only"); });
 
   // ---------- view switching (Trade <-> Profile/Wallet) ----------
   function showView(v){
